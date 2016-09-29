@@ -1,5 +1,5 @@
 {
-  "name": "KinobiWeb/olc-php",
+  "name": "Kinobiweb/olc-php",
   "description": "A PHP implementation of Open Location Codes by Google",
   "keywords": [
     "open-location-code",
@@ -27,12 +27,12 @@
   },
   "autoload": {
     "psr-4": {
-      "KinobiWeb\\": "src"
+      "Kinobiweb\\": "src"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "KinobiWeb\\": "tests"
+      "Kinobiweb\\": "tests"
     }
   },
   "scripts": {

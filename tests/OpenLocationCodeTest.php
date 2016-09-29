@@ -1,12 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace KinobiWeb;
-
+namespace Kinobiweb;
 
 class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
 {
-
     public function testItCanbeInstantiate()
     {
         $olc = new OpenLocationCode();
@@ -28,6 +26,8 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
             '60CRMQRG+' => false,
             '60000000+' => false,
             '6GCRMQ00+5' => false,
+            '6GCRMQ00+5' => false,
+            '6GCRMQRG+5' => false,
             '6GCRMQRG+5Z' => false,
             '6GCRMQRG+59' => true
         ];

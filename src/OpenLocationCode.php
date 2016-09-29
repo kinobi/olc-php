@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 
-namespace KinobiWeb;
+namespace Kinobiweb;
 
 /**
  * Convert locations to and from short codes.
@@ -32,21 +32,21 @@ namespace KinobiWeb;
  * Examples:
  *
  * Encode a location, default accuracy:
- * $code = (new KinobiWeb\OpenLocationCode)->encode(47.365590, 8.524997)->getCode();
+ * $code = (Kinobiweb\OpenLocationCode::encode(47.365590, 8.524997))->getCode();
  *
  * Encode a location using one stage of additional refinement:
- * $code = (new KinobiWeb\OpenLocationCode)->encode(47.365590, 8.524997, 11)->getCode();
+ * $code = (Kinobiweb\OpenLocationCode::encode(47.365590, 8.524997, 11))->getCode();
  *
  * Decode a full code:
- * $coord = (new KinobiWeb\OpenLocationCode)->setCode($code->getCode());
+ * $coord = (new Kinobiweb\OpenLocationCode)->setCode($code->getCode());
  * $msg = 'Center is ' . $coord->getLatitudeCenter() . ',' . $coord->getLongitudeCenter();
  *
  * Attempt to trim the first characters from a code:
- * $shortCode = (new KinobiWeb\OpenLocationCode('8FVC9G8F+6X'))->shorten(47.5, 8.5);
+ * $shortCode = (new Kinobiweb\OpenLocationCode('8FVC9G8F+6X'))->shorten(47.5, 8.5);
  *
  * Recover the full code from a short code:
- * $code = (new KinobiWeb\OpenLocationCode('9G8F+6X'))->recoverNearest(47.4, 8.6)->getCode();
- * $code = (new KinobiWeb\OpenLocationCode('8F+6X'))->recoverNearest(47.4, 8.6)->getCode();
+ * $code = (new Kinobiweb\OpenLocationCode('9G8F+6X'))->recoverNearest(47.4, 8.6)->getCode();
+ * $code = (new Kinobiweb\OpenLocationCode('8F+6X'))->recoverNearest(47.4, 8.6)->getCode();
  */
 class OpenLocationCode
 {
@@ -187,7 +187,7 @@ class OpenLocationCode
         }
         // If there are characters after the separator, make sure there isn't just
         // one of them (not legal).
-        if (strlen($this->code) - strpos($this->code, static::PADDING_CHARACTER) - 1 == 1) {
+        if (strlen($this->code) - strpos($this->code, static::SEPARATOR) - 1 == 1) {
             return false;
         }
 
