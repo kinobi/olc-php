@@ -204,4 +204,28 @@ class OpenLocationCode
 
         return true;
     }
+
+    /**
+     * Determines if a code is a valid short code.
+     *
+     * A short Open Location Code is a sequence created by removing four or more
+     * digits from an Open Location Code. It must include a separator
+     * character.
+     *
+     * @return bool
+     */
+    public function isShort()
+    {
+        // Check it's valid.
+        if (!$this->isValid()) {
+            return false;
+        }
+        // If there are less characters than expected before the SEPARATOR.
+        if (strpos($this->code, static::SEPARATOR) >= 0
+            && strpos($this->code, static::SEPARATOR) < static::SEPARATOR_POSITION
+        ) {
+            return true;
+        }
+        return false;
+    }
 }

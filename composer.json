@@ -1,6 +1,6 @@
 {
-  "name": "Kinobiweb/olc-php",
-  "description": "A PHP implementation of Open Location Codes by Google",
+  "name": "kinobiweb/olc-php",
+  "description": "A PHP implementation of Open Location Code by Google",
   "keywords": [
     "open-location-code",
     "olc",
@@ -11,7 +11,7 @@
     "geocoding"
   ],
   "type": "library",
-  "license": "Apache",
+  "license": "Apache-2.0",
   "homepage": "https://github.com/kinobi/olc-php",
   "authors": [
     {

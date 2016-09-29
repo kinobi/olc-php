@@ -1,4 +1,4 @@
-# Open Locations Code PHP Library
+# Open Location Code PHP Library
 
 PHP implementation of Google Open Location Code (Plus+Codes)
 

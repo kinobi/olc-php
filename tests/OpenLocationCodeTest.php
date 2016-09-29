@@ -41,4 +41,22 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
             }
         }
     }
+
+    public function testItCanValidateAShortCode()
+    {
+        $tests = [
+            '' => false,
+            '58GR22WM+PW' => false,
+            '22WM+PW' => true
+        ];
+        foreach ($tests as $code => $expected) {
+            $olc = new OpenLocationCode((string)$code);
+            $isValid = $olc->isShort();
+            if (!$expected) {
+                $this->assertFalse($isValid);
+            } else {
+                $this->assertTrue($isValid);
+            }
+        }
+    }
 }
