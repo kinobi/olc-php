@@ -1,0 +1,44 @@
+{
+  "name": "KinobiWeb/olc-php",
+  "description": "A PHP implementation of Open Location Codes by Google",
+  "keywords": [
+    "open-location-code",
+    "olc",
+    "location",
+    "code",
+    "gps",
+    "google",
+    "geocoding"
+  ],
+  "type": "library",
+  "license": "Apache",
+  "homepage": "https://github.com/kinobi/olc-php",
+  "authors": [
+    {
+      "name": "Lionel Brianto",
+      "email": "kinobi@kinobiweb.com",
+      "homepage": "https://kinobiweb.com/",
+      "role": "Developer"
+    }
+  ],
+  "minimum-stability": "stable",
+  "require": {
+    "php": "^7.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "KinobiWeb\\": "src"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "KinobiWeb\\": "tests"
+    }
+  },
+  "scripts": {
+    "test": "phpunit"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^5.5"
+  }
+}
