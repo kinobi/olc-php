@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 
 namespace Kinobiweb;
+use Kinobiweb\OpenLocationCode\Exception;
 
 /**
  * Convert locations to and from short codes.
@@ -128,12 +129,25 @@ class OpenLocationCode
      * OpenLocationCode constructor.
      *
      * @param string|null $code
+     *
+     * @throws Exception
      */
     public function __construct(string $code = null)
     {
         if (!is_null($code)) {
+            if (!$this->isValid($code)) {
+                throw new Exception("The code passed '{$code}' is not a valid Open Location Code");
+            }
             $this->code = trim($code);
         }
+    }
+
+    /**
+     * @return string
+     */
+    public function getCode(): string
+    {
+        return $this->code;
     }
 
     /**
@@ -143,56 +157,58 @@ class OpenLocationCode
      * set with at most one separator. The separator can be in any even-numbered
      * position up to the eighth digit.
      *
+     * @param string $code
+     *
      * @return bool
      */
-    public function isValid()
+    public static function isValid(string $code): bool
     {
-        if (!$this->code) {
+        if (!$code) {
             return false;
         }
         // The separator is required.
-        if (strpos($this->code, static::SEPARATOR) === false) {
+        if (strpos($code, static::SEPARATOR) === false) {
             return false;
         }
-        if (strpos($this->code, static::SEPARATOR) != strrpos($this->code, static::SEPARATOR)) {
+        if (strpos($code, static::SEPARATOR) != strrpos($code, static::SEPARATOR)) {
             return false;
         }
         // Is it the only character?
-        if (strlen($this->code) == 1) {
+        if (strlen($code) == 1) {
             return false;
         }
         // Is it in an illegal position?
-        if (strpos($this->code, static::SEPARATOR) > static::SEPARATOR_POSITION ||
-            strpos($this->code, static::SEPARATOR) % 2 == 1
+        if (strpos($code, static::SEPARATOR) > static::SEPARATOR_POSITION ||
+            strpos($code, static::SEPARATOR) % 2 == 1
         ) {
             return false;
         }
         // We can have an even number of padding characters before the separator,
         // but then it must be the final character.
-        if (strpos($this->code, static::PADDING_CHARACTER) !== false) {
+        if (strpos($code, static::PADDING_CHARACTER) !== false) {
             // Not allowed to start with them!
-            if (strpos($this->code, static::PADDING_CHARACTER) == 0) {
+            if (strpos($code, static::PADDING_CHARACTER) == 0) {
                 return false;
             }
             // There can only be one group and it must have even length.
             $padMatch = [];
-            preg_match_all('(' . static::PADDING_CHARACTER . '+)', $this->code, $padMatch);
+            preg_match_all('(' . static::PADDING_CHARACTER . '+)', $code, $padMatch);
             if (count($padMatch[0]) > 1 || (strlen($padMatch[0][0]) % 2 == 1) || (strlen($padMatch[0][0]) > static::SEPARATOR_POSITION - 2)) {
                 return false;
             }
             // If the code is long enough to end with a separator, make sure it does.
-            if (substr($this->code, -1) != static::SEPARATOR) {
+            if (substr($code, -1) != static::SEPARATOR) {
                 return false;
             }
         }
         // If there are characters after the separator, make sure there isn't just
         // one of them (not legal).
-        if (strlen($this->code) - strpos($this->code, static::SEPARATOR) - 1 == 1) {
+        if (strlen($code) - strpos($code, static::SEPARATOR) - 1 == 1) {
             return false;
         }
 
         // Strip the separator and any padding characters.
-        $code = str_replace([static::SEPARATOR, static::PADDING_CHARACTER], '', $this->code);
+        $code = str_replace([static::SEPARATOR, static::PADDING_CHARACTER], '', $code);
         // Check the code contains only valid characters.
         $codeLength = strlen($code);
         for ($i = 0; $i < $codeLength; $i++) {
@@ -212,20 +228,61 @@ class OpenLocationCode
      * digits from an Open Location Code. It must include a separator
      * character.
      *
+     * @param string $code
+     *
      * @return bool
      */
-    public function isShort()
+    public static function isShort(string $code): bool
     {
         // Check it's valid.
-        if (!$this->isValid()) {
+        if (!static::isValid($code)) {
             return false;
         }
         // If there are less characters than expected before the SEPARATOR.
-        if (strpos($this->code, static::SEPARATOR) >= 0
-            && strpos($this->code, static::SEPARATOR) < static::SEPARATOR_POSITION
+        if (strpos($code, static::SEPARATOR) >= 0
+            && strpos($code, static::SEPARATOR) < static::SEPARATOR_POSITION
         ) {
             return true;
         }
         return false;
     }
+
+    /**
+     * Determines if a code is a valid full Open Location Code.
+     *
+     * Not all possible combinations of Open Location Code characters decode to
+     * valid latitude and longitude values. This checks that a code is valid
+     * and also that the latitude and longitude values are legal. If the prefix
+     * character is present, it must be the first character. If the separator
+     * character is present, it must be after four characters.
+     *
+     * @return bool
+     */
+//var isFull = OpenLocationCode.isFull = function(code) {
+//    if (!isValid(code)) {
+//        return false;
+//    }
+//    // If it's short, it's not full.
+//    if (isShort(code)) {
+//        return false;
+//    }
+//
+//    // Work out what the first latitude character indicates for latitude.
+//    var firstLatValue = CODE_ALPHABET_.indexOf(
+//            code.charAt(0).toUpperCase()) * ENCODING_BASE_;
+//    if (firstLatValue >= LATITUDE_MAX_ * 2) {
+//        // The code would decode to a latitude of >= 90 degrees.
+//        return false;
+//    }
+//    if (code.length > 1) {
+//        // Work out what the first longitude character indicates for longitude.
+//        var firstLngValue = CODE_ALPHABET_.indexOf(
+//                code.charAt(1).toUpperCase()) * ENCODING_BASE_;
+//        if (firstLngValue >= LONGITUDE_MAX_ * 2) {
+//            // The code would decode to a longitude of >= 180 degrees.
+//            return false;
+//        }
+//    }
+//    return true;
+//};
 }

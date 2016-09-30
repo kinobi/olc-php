@@ -3,13 +3,31 @@ declare(strict_types=1);
 
 namespace Kinobiweb;
 
+use Kinobiweb\OpenLocationCode\Exception;
+
 class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
 {
-    public function testItCanbeInstantiate()
+    public function testItCanbeInstantiateEmpty()
     {
         $olc = new OpenLocationCode();
 
         $this->assertInstanceOf(OpenLocationCode::class, $olc);
+    }
+
+    public function testItCanBeInstantiateWithACode()
+    {
+        $code = '6GCRMQRG+59';
+        $olc = new OpenLocationCode($code);
+
+        $this->assertInstanceOf(OpenLocationCode::class, $olc);
+        $this->assertSame($code, $olc->getCode());
+    }
+
+    public function testItValidateOnInstantiation()
+    {
+        $this->expectException(Exception::class);
+
+        $olc = new OpenLocationCode('azerty');
     }
 
     public function testItCanValidateACode()
@@ -32,8 +50,7 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
             '6GCRMQRG+59' => true
         ];
         foreach ($tests as $code => $expected) {
-            $olc = new OpenLocationCode((string)$code);
-            $isValid = $olc->isValid();
+            $isValid = OpenLocationCode::isValid((string)$code);
             if (!$expected) {
                 $this->assertFalse($isValid);
             } else {
@@ -50,8 +67,7 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
             '22WM+PW' => true
         ];
         foreach ($tests as $code => $expected) {
-            $olc = new OpenLocationCode((string)$code);
-            $isValid = $olc->isShort();
+            $isValid = OpenLocationCode::isShort((string)$code);
             if (!$expected) {
                 $this->assertFalse($isValid);
             } else {
