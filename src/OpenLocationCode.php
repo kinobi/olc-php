@@ -256,33 +256,35 @@ class OpenLocationCode
      * character is present, it must be the first character. If the separator
      * character is present, it must be after four characters.
      *
+     * @param string $code
+     *
      * @return bool
      */
-//var isFull = OpenLocationCode.isFull = function(code) {
-//    if (!isValid(code)) {
-//        return false;
-//    }
-//    // If it's short, it's not full.
-//    if (isShort(code)) {
-//        return false;
-//    }
-//
-//    // Work out what the first latitude character indicates for latitude.
-//    var firstLatValue = CODE_ALPHABET_.indexOf(
-//            code.charAt(0).toUpperCase()) * ENCODING_BASE_;
-//    if (firstLatValue >= LATITUDE_MAX_ * 2) {
-//        // The code would decode to a latitude of >= 90 degrees.
-//        return false;
-//    }
-//    if (code.length > 1) {
-//        // Work out what the first longitude character indicates for longitude.
-//        var firstLngValue = CODE_ALPHABET_.indexOf(
-//                code.charAt(1).toUpperCase()) * ENCODING_BASE_;
-//        if (firstLngValue >= LONGITUDE_MAX_ * 2) {
-//            // The code would decode to a longitude of >= 180 degrees.
-//            return false;
-//        }
-//    }
-//    return true;
-//};
+    public static function isFull(string $code)
+    {
+        if (!static::isValid($code)) {
+            return false;
+        }
+        // If it's short, it's not full.
+        if (static::isShort($code)) {
+            return false;
+        }
+
+        // Work out what the first latitude character indicates for latitude.
+        $firstLatValue = strpos(static::CODE_ALPHABET, strtoupper($code[0])) * static::ENCODING_BASE;
+        if ($firstLatValue >= static::LATITUDE_MAX * 2) {
+            // The code would decode to a latitude of >= 90 degrees.
+            return false;
+        }
+        if (strlen($code) > 1) {
+            // Work out what the first longitude character indicates for longitude.
+            $firstLngValue = strpos(static::CODE_ALPHABET, strtoupper($code[1])) * static::ENCODING_BASE;
+            if ($firstLngValue >= static::LONGITUDE_MAX * 2) {
+                // The code would decode to a longitude of >= 180 degrees.
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

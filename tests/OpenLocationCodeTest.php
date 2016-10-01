@@ -28,6 +28,7 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
         $this->expectException(Exception::class);
 
         $olc = new OpenLocationCode('azerty');
+        $this->assertInstanceOf(OpenLocationCode::class, $olc);
     }
 
     public function testItCanValidateACode()
@@ -43,7 +44,6 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
             '60C0MQRG+' => false,
             '60CRMQRG+' => false,
             '60000000+' => false,
-            '6GCRMQ00+5' => false,
             '6GCRMQ00+5' => false,
             '6GCRMQRG+5' => false,
             '6GCRMQRG+5Z' => false,
@@ -67,11 +67,30 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
             '22WM+PW' => true
         ];
         foreach ($tests as $code => $expected) {
-            $isValid = OpenLocationCode::isShort((string)$code);
+            $isShort = OpenLocationCode::isShort((string)$code);
             if (!$expected) {
-                $this->assertFalse($isValid);
+                $this->assertFalse($isShort);
             } else {
-                $this->assertTrue($isValid);
+                $this->assertTrue($isShort);
+            }
+        }
+    }
+
+    public function testItCanValidateAFullCode()
+    {
+        $tests = [
+            '' => false,
+            '22WM+PW' => false,
+            'X8GR22WM+PW' => false,
+            '5XGR22WM+PW' => false,
+            '58GR22WM+PW' => true,
+        ];
+        foreach ($tests as $code => $expected) {
+            $isFull = OpenLocationCode::isFull((string)$code);
+            if (!$expected) {
+                $this->assertFalse($isFull);
+            } else {
+                $this->assertTrue($isFull);
             }
         }
     }
