@@ -94,4 +94,10 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
             }
         }
     }
+
+    public function testItCanGenerateACode()
+    {
+        $olc = OpenLocationCode::encode(48.847003, 2.286061, 15);
+        echo $olc->getCode();
+    }
 }

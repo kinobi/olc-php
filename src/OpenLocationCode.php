@@ -287,4 +287,179 @@ class OpenLocationCode
 
         return true;
     }
+
+    /**
+     * Encode a location into an Open Location Code.
+     *
+     * Produces a code of the specified length, or the default length if no length
+     * is provided.
+     *
+     * The length determines the accuracy of the code. The default length is
+     * 10 characters, returning a code of approximately 13.5x13.5 meters. Longer
+     * codes represent smaller areas, but lengths > 14 are sub-centimetre and so
+     * 11 or 12 are probably the limit of useful codes.
+     *
+     * @param float $latitude A latitude in signed decimal degrees. Will be clipped to the range -90 to 90.
+     * @param float $longitude A longitude in signed decimal degrees. Will be normalised to the range -180 to 180.
+     * @param int $codeLength The number of significant digits in the output code, not  including any separator characters.
+     *
+     * @return OpenLocationCode|static
+     *
+     * @throws Exception
+     */
+    public static function encode(float $latitude, float $longitude, int $codeLength = null): OpenLocationCode
+    {
+        if (is_null($codeLength)) {
+            $codeLength = static::PAIR_CODE_LENGTH;
+        }
+        if ($codeLength < 2 || ($codeLength < static::SEPARATOR_POSITION && $codeLength % 2 == 1)) {
+            throw new Exception('Invalid Open Location Code length');
+        }
+        // Ensure that latitude and longitude are valid.
+        $latitude = static::clipLatitude($latitude);
+        $longitude = static::normalizeLongitude($longitude);
+        // Latitude 90 needs to be adjusted to be just less, so the returned code can also be decoded.
+        if ($latitude == 90) {
+            $latitude = $latitude - static::computeLatitudePrecision($codeLength);
+        }
+        $code = static::encodePairs($latitude, $longitude, min($codeLength, static::PAIR_CODE_LENGTH));
+        // If the requested length indicates we want grid refined codes.
+        if ($codeLength > static::PAIR_CODE_LENGTH) {
+            $code .= static::encodeGrid($latitude, $longitude, $codeLength - static::PAIR_CODE_LENGTH);
+        }
+        return new static($code);
+    }
+
+    /**
+     * Clip a latitude into the range -90 to 90.
+     *
+     * @param float $latitude A latitude in signed decimal degrees.
+     *
+     * @return float
+     */
+    private static function clipLatitude(float $latitude)
+    {
+        return min(90, max(-90, $latitude));
+    }
+
+    /**
+     * Compute the latitude precision value for a given code length.
+     *
+     * Lengths <= 10 have the same precision for latitude and longitude, but lengths > 10
+     * have different precisions due to the grid method having fewer columns than rows.
+     *
+     * @param int $codeLength
+     *
+     * @return float
+     */
+    private static function computeLatitudePrecision(int $codeLength)
+    {
+        if ($codeLength <= 10) {
+            return pow(20, floor($codeLength / -2 + 2));
+        }
+        return pow(20, -2) / pow(static::GRID_ROWS, $codeLength - 10);
+    }
+
+    /**
+     * Normalize a longitude into the range -180 to 180, not including 180.
+     *
+     * @param float $longitude A longitude in signed decimal degrees.
+     *
+     * @return float
+     */
+    private static function normalizeLongitude(float $longitude)
+    {
+        while ($longitude < -180) {
+            $longitude = $longitude + 360;
+        }
+        while ($longitude >= 180) {
+            $longitude = $longitude - 360;
+        }
+        return $longitude;
+    }
+
+    /**
+     * Encode a location into a sequence of OLC lat/lng pairs.
+     *
+     * This uses pairs of characters (longitude and latitude in that order) to
+     * represent each step in a 20x20 grid. Each code, therefore, has 1/400th
+     * the area of the previous code.
+     *
+     * @param float $latitude A latitude in signed decimal degrees.
+     * @param float $longitude A longitude in signed decimal degrees.
+     * @param int $codeLength The number of significant digits in the output code, not including any separator characters.
+     *
+     * @return string
+     */
+    private static function encodePairs(float $latitude, float $longitude, int $codeLength): string
+    {
+        $code = '';
+        // Adjust latitude and longitude so they fall into positive ranges.
+        $adjustedLatitude = $latitude + static::LATITUDE_MAX;
+        $adjustedLongitude = $longitude + static::LONGITUDE_MAX;
+        // Count digits - can't use string length because it may include a separator character.
+        $digitCount = 0;
+        while ($digitCount < $codeLength) {
+            // Provides the value of digits in this place in decimal degrees.
+            $placeValue = static::PAIR_RESOLUTIONS[(int)floor($digitCount / 2)];
+            // Do the latitude - gets the digit for this place and subtracts that for
+            // the next digit.
+            $digitValue = floor($adjustedLatitude / $placeValue);
+            $adjustedLatitude -= $digitValue * $placeValue;
+            $code .= static::CODE_ALPHABET[(int)$digitValue];
+            $digitCount += 1;
+            // And do the longitude - gets the digit for this place and subtracts that
+            // for the next digit.
+            $digitValue = floor($adjustedLongitude / $placeValue);
+            $adjustedLongitude -= $digitValue * $placeValue;
+            $code .= static::CODE_ALPHABET[(int)$digitValue];
+            $digitCount += 1;
+            // Should we add a separator here?
+            if ($digitCount == static::SEPARATOR_POSITION && $digitCount < $codeLength) {
+                $code .= static::SEPARATOR;
+            }
+        }
+        if (strlen($code) < static::SEPARATOR_POSITION) {
+            $code = str_pad($code, static::SEPARATOR_POSITION, static::PADDING_CHARACTER);
+        }
+        if (strlen($code) == static::SEPARATOR_POSITION) {
+            $code = $code . static::SEPARATOR;
+        }
+        return $code;
+    }
+
+    /**
+     * Encode a location using the grid refinement method into an OLC string.
+     *
+     * The grid refinement method divides the area into a grid of 4x5, and uses a
+     * single character to refine the area. This allows default accuracy OLC codes
+     * to be refined with just a single character.
+     *
+     * @param float $latitude A latitude in signed decimal degrees.
+     * @param float $longitude A longitude in signed decimal degrees.
+     * @param int $codeLength The number of significant digits in the output code, not including any separator characters.
+     *
+     * @return string
+     */
+    private static function encodeGrid(float $latitude, float $longitude, int $codeLength): string
+    {
+        $code = '';
+        $latPlaceValue = static::GRID_SIZE_DEGREES;
+        $lngPlaceValue = static::GRID_SIZE_DEGREES;
+        // Adjust latitude and longitude so they fall into positive ranges and
+        // get the offset for the required places.
+        $adjustedLatitude = fmod($latitude + static::LATITUDE_MAX, $latPlaceValue);
+        $adjustedLongitude = fmod($longitude + static::LONGITUDE_MAX, $lngPlaceValue);
+        for ($i = 0; $i < $codeLength; $i++) {
+            // Work out the row and column.
+            $row = floor($adjustedLatitude / ($latPlaceValue / static::GRID_ROWS));
+            $col = floor($adjustedLongitude / ($lngPlaceValue / static::GRID_COLUMNS));
+            $latPlaceValue /= static::GRID_ROWS;
+            $lngPlaceValue /= static::GRID_COLUMNS;
+            $adjustedLatitude -= $row * $latPlaceValue;
+            $adjustedLongitude -= $col * $lngPlaceValue;
+            $code .= static::CODE_ALPHABET[intval($row * static::GRID_COLUMNS + $col)];
+        }
+        return $code;
+    }
 }
