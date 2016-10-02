@@ -135,11 +135,22 @@ class OpenLocationCode
     public function __construct(string $code = null)
     {
         if (!is_null($code)) {
+            $code = strtoupper(trim($code));
             if (!$this->isValid($code)) {
                 throw new Exception("The code passed '{$code}' is not a valid Open Location Code");
             }
-            $this->code = trim($code);
+            $this->code = $code;
         }
+    }
+
+    /**
+     * OpenLocationCode text representation.
+     *
+     * @return string
+     */
+    public function __toString()
+    {
+        return $this->getCode();
     }
 
     /**
