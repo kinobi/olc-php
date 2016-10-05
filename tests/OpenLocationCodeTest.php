@@ -141,6 +141,17 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
         }
     }
 
+    public function testCodeAreaTests()
+    {
+        $codeArea = new OpenLocationCode\CodeArea(1, 2, 3, 4, 10);
+        $this->assertEquals(1, $codeArea->latitudeLo());
+        $this->assertEquals(2, $codeArea->longitudeLo());
+        $this->assertEquals(3, $codeArea->latitudeHi());
+        $this->assertEquals(4, $codeArea->longitudeHi());
+        $this->assertEquals(2, $codeArea->latitudeCenter());
+        $this->assertEquals(3, $codeArea->longitudeCenter());
+    }
+
     private function getTestData($csv)
     {
         $url = sprintf("https://raw.githubusercontent.com/google/open-location-code/master/test_data/%s", $csv);
