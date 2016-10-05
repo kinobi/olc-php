@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Kinobiweb;
 
+use Kinobiweb\OpenLocationCode\CodeArea;
 use Kinobiweb\OpenLocationCode\Exception;
 
 /**
@@ -32,22 +33,24 @@ use Kinobiweb\OpenLocationCode\Exception;
  *
  * Examples:
  *
+ * use Kinobiweb\OpenLocationCode;
+ *
  * Encode a location, default accuracy:
- * $code = (Kinobiweb\OpenLocationCode::encode(47.365590, 8.524997))->getCode();
+ * $code = OpenLocationCode::encode(47.365590, 8.524997);
  *
  * Encode a location using one stage of additional refinement:
- * $code = (Kinobiweb\OpenLocationCode::encode(47.365590, 8.524997, 11))->getCode();
+ * $code = OpenLocationCode::encode(47.365590, 8.524997, 11);
  *
  * Decode a full code:
- * $coord = (new Kinobiweb\OpenLocationCode)->setCode($code->getCode());
+ * $coord = OpenLocationCode::decode($code);
  * $msg = 'Center is ' . $coord->getLatitudeCenter() . ',' . $coord->getLongitudeCenter();
  *
  * Attempt to trim the first characters from a code:
- * $shortCode = (new Kinobiweb\OpenLocationCode('8FVC9G8F+6X'))->shorten(47.5, 8.5);
+ * $shortCode = OpenLocationCode::shorten('8FVC9G8F+6X', 47.5, 8.5);
  *
  * Recover the full code from a short code:
- * $code = (new Kinobiweb\OpenLocationCode('9G8F+6X'))->recoverNearest(47.4, 8.6)->getCode();
- * $code = (new Kinobiweb\OpenLocationCode('8F+6X'))->recoverNearest(47.4, 8.6)->getCode();
+ * $code = OpenLocationCode::recoverNearest('9G8F+6X', 47.4, 8.6);
+ * $code = OpenLocationCode::recoverNearest('8F+6X', 47.4, 8.6);
  */
 class OpenLocationCode
 {
@@ -124,42 +127,6 @@ class OpenLocationCode
      * @var string  Open Location Code
      */
     protected $code;
-
-    /**
-     * OpenLocationCode constructor.
-     *
-     * @param string|null $code
-     *
-     * @throws Exception
-     */
-    public function __construct(string $code = null)
-    {
-        if (!is_null($code)) {
-            $code = strtoupper(trim($code));
-            if (!$this->isValid($code)) {
-                throw new Exception("The code passed '{$code}' is not a valid Open Location Code");
-            }
-            $this->code = $code;
-        }
-    }
-
-    /**
-     * OpenLocationCode text representation.
-     *
-     * @return string
-     */
-    public function __toString()
-    {
-        return $this->getCode();
-    }
-
-    /**
-     * @return string
-     */
-    public function getCode(): string
-    {
-        return $this->code;
-    }
 
     /**
      * Determines if a code is valid.
@@ -271,7 +238,7 @@ class OpenLocationCode
      *
      * @return bool
      */
-    public static function isFull(string $code)
+    public static function isFull(string $code): bool
     {
         if (!static::isValid($code)) {
             return false;
@@ -314,11 +281,11 @@ class OpenLocationCode
      * @param float $longitude A longitude in signed decimal degrees. Will be normalised to the range -180 to 180.
      * @param int $codeLength The number of significant digits in the output code, not  including any separator characters.
      *
-     * @return OpenLocationCode|static
+     * @return string
      *
      * @throws Exception
      */
-    public static function encode(float $latitude, float $longitude, int $codeLength = null): OpenLocationCode
+    public static function encode(float $latitude, float $longitude, int $codeLength = null): string
     {
         if (is_null($codeLength)) {
             $codeLength = static::PAIR_CODE_LENGTH;
@@ -338,7 +305,44 @@ class OpenLocationCode
         if ($codeLength > static::PAIR_CODE_LENGTH) {
             $code .= static::encodeGrid($latitude, $longitude, $codeLength - static::PAIR_CODE_LENGTH);
         }
-        return new static($code);
+        return $code;
+    }
+
+    /**
+     * Decodes an Open Location Code into the location coordinates.
+     *
+     * Returns a CodeArea object that includes the coordinates of the bounding box - the lower left,
+     * center and upper right.
+     *
+     * @param string $code The Open Location Code to decode.
+     * @return CodeArea A CodeArea object that provides the latitude and longitude of two of the
+     * corners of the area, the center, and the length of the original code.
+     *
+     * @throws Exception
+     */
+    public static function decode(string $code): CodeArea
+    {
+        if (!static::isFull($code)) {
+            throw new Exception('Passed Open Location Code is not a valid full code: ' . $code);
+        }
+        // Strip out separator character (we've already established the code is
+        // valid so the maximum is one), padding characters and convert to upper
+        // case.
+        $code = str_replace([static::SEPARATOR, static::PADDING_CHARACTER], '', $code);
+        $code = strtoupper($code);
+        // Decode the lat/lng pair component.
+        $codeArea = static::decodePairs(substr($code, 0, static::PAIR_CODE_LENGTH));
+        // If there is a grid refinement component, decode that.
+        if (strlen($code) <= static::PAIR_CODE_LENGTH) {
+            return $codeArea;
+        }
+        $gridArea = static::decodeGrid(substr($code, static::PAIR_CODE_LENGTH));
+        return new CodeArea(
+            $codeArea->latitudeLo + $gridArea->latitudeLo,
+            $codeArea->longitudeLo + $gridArea->longitudeLo,
+            $codeArea->latitudeLo + $gridArea->latitudeHi,
+            $codeArea->longitudeLo + $gridArea->longitudeHi,
+            $codeArea->codeLength + $gridArea->codeLength);
     }
 
     /**
@@ -348,7 +352,7 @@ class OpenLocationCode
      *
      * @return float
      */
-    private static function clipLatitude(float $latitude)
+    private static function clipLatitude(float $latitude): float
     {
         return min(90, max(-90, $latitude));
     }
@@ -363,10 +367,10 @@ class OpenLocationCode
      *
      * @return float
      */
-    private static function computeLatitudePrecision(int $codeLength)
+    private static function computeLatitudePrecision(int $codeLength): float
     {
         if ($codeLength <= 10) {
-            return pow(20, floor($codeLength / -2 + 2));
+            return (float)pow(20, floor($codeLength / -2 + 2));
         }
         return pow(20, -2) / pow(static::GRID_ROWS, $codeLength - 10);
     }
@@ -378,7 +382,7 @@ class OpenLocationCode
      *
      * @return float
      */
-    private static function normalizeLongitude(float $longitude)
+    private static function normalizeLongitude(float $longitude): float
     {
         while ($longitude < -180) {
             $longitude = $longitude + 360;
@@ -396,9 +400,9 @@ class OpenLocationCode
      * represent each step in a 20x20 grid. Each code, therefore, has 1/400th
      * the area of the previous code.
      *
-     * @param float $latitude A latitude in signed decimal degrees.
-     * @param float $longitude A longitude in signed decimal degrees.
-     * @param int $codeLength The number of significant digits in the output code, not including any separator characters.
+     * @param float $latitude   A latitude in signed decimal degrees.
+     * @param float $longitude  A longitude in signed decimal degrees.
+     * @param int   $codeLength The number of significant digits in the output code, not including any separator characters.
      *
      * @return string
      */
@@ -446,9 +450,9 @@ class OpenLocationCode
      * single character to refine the area. This allows default accuracy OLC codes
      * to be refined with just a single character.
      *
-     * @param float $latitude A latitude in signed decimal degrees.
-     * @param float $longitude A longitude in signed decimal degrees.
-     * @param int $codeLength The number of significant digits in the output code, not including any separator characters.
+     * @param float $latitude   A latitude in signed decimal degrees.
+     * @param float $longitude  A longitude in signed decimal degrees.
+     * @param int   $codeLength The number of significant digits in the output code, not including any separator characters.
      *
      * @return string
      */
@@ -472,5 +476,85 @@ class OpenLocationCode
             $code .= static::CODE_ALPHABET[intval($row * static::GRID_COLUMNS + $col)];
         }
         return $code;
+    }
+
+    /**
+     * Decode an OLC code made up of lat/lng pairs.
+     *
+     * This decodes an OLC code made up of alternating latitude and longitude characters, encoded using base 20.
+     *
+     * @param string $code A valid OLC code, presumed to be full, but with the separator removed.
+     *
+     * @return CodeArea
+     */
+    private static function decodePairs(string $code): CodeArea
+    {
+        $latitude = static::decodePairsSequence($code, 0);
+        $longitude = static::decodePairsSequence($code, 1);
+        // Correct the values and set them into the CodeArea object.
+        return new CodeArea(
+            $latitude[0] - static::LATITUDE_MAX,
+            $longitude[0] - static::LONGITUDE_MAX,
+            $latitude[1] - static::LATITUDE_MAX,
+            $longitude[1] - static::LONGITUDE_MAX,
+            strlen($code)
+        );
+    }
+
+    /**
+     * Decode either a latitude or longitude sequence.
+     *
+     * This decodes the latitude or longitude sequence of a lat/lng pair encoding.
+     * Starting at the character at position offset, every second character is decoded and the value returned.
+     *
+     * @param string $code      A valid OLC code, presumed to be full, with the separator removed.
+     * @param int    $offset    The character to start from.
+     *
+     * @return array A pair of the low and high values. The low value comes from decoding the
+     * characters. The high value is the low value plus the resolution of the
+     * last position. Both values are offset into positive ranges and will need
+     * to be corrected before use.
+     */
+    private static function decodePairsSequence(string $code, int $offset): array
+    {
+        $i = $value = 0;
+        $codeLength = strlen($code);
+        while ($i * 2 + $offset < $codeLength) {
+            $value += strpos(static::CODE_ALPHABET, $code[$i * 2 + $offset]) * static::PAIR_RESOLUTIONS[$i];
+            $i++;
+        }
+        return [$value, $value + static::PAIR_RESOLUTIONS[$i - 1]];
+    }
+
+    /**
+     * Decode the grid refinement portion of an OLC code.
+     *
+     * This decodes an OLC code using the grid refinement method.
+     *
+     * @param $code string A valid OLC code sequence that is only the grid refinement
+     * portion. This is the portion of a code starting at position 11.
+     *
+     * @return CodeArea
+     */
+    private static function decodeGrid(string $code): CodeArea
+    {
+        $latitudeLo = $longitudeLo = 0;
+        $latPlaceValue = $lngPlaceValue = static::GRID_SIZE_DEGREES;
+        $i = 0;
+        $codeLength = strlen($code);
+        while ($i < $codeLength) {
+            $codeIndex = strpos(static::CODE_ALPHABET, $code[$i]);
+            $row = floor($codeIndex / static::GRID_COLUMNS);
+            $col = $codeIndex % static::GRID_COLUMNS;
+
+            $latPlaceValue /= static::GRID_ROWS;
+            $lngPlaceValue /= static::GRID_COLUMNS;
+
+            $latPlaceValue += $row * $latPlaceValue;
+            $longitudeLo += $col * $lngPlaceValue;
+            $i++;
+        }
+        return new CodeArea($latitudeLo, $longitudeLo, $latitudeLo + $latPlaceValue,
+            $longitudeLo + $lngPlaceValue, $codeLength);
     }
 }

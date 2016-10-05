@@ -7,28 +7,56 @@ use Kinobiweb\OpenLocationCode\Exception;
 
 class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
 {
-    public function testItCanbeInstantiateEmpty()
+    public function testValidityTests()
     {
-        $olc = new OpenLocationCode();
-
-        $this->assertInstanceOf(OpenLocationCode::class, $olc);
+        $tests = $this->getTestData('validityTests.csv');
+        while ($test = fgetcsv($tests)) {
+            if(preg_match('/^\s*#/', $test[0])) {
+                continue;
+            }
+            $code = $test[0];
+            $is_valid = $test[1] == 'true';
+            $is_short = $test[2] == 'true';
+            $is_full = $test[3] == 'true';
+            $is_valid_olc = OpenLocationCode::isValid($code);
+            $is_short_olc = OpenLocationCode::isShort($code);
+            $is_full_olc = OpenLocationCode::isFull($code);
+            $result = $is_valid_olc == $is_valid && $is_short_olc == $is_short && $is_full_olc == $is_full;
+            $this->assertTrue($result);
+        }
     }
 
-    public function testItCanBeInstantiateWithACode()
+    public function testEncodingDecodingTests()
     {
-        $code = '6GCRMQRG+59';
-        $olc = new OpenLocationCode($code);
+        $tests = $this->getTestData('encodingTests.csv');
+        while ($test = fgetcsv($tests)) {
+            if (preg_match('/^\s*#/', $test[0])) {
+                continue;
+            }
+            // Convert the string numbers to float.
+            $test[1] = floatval($test[1]);
+            $test[2] = floatval($test[2]);
+            $test[3] = floatval($test[3]);
+            $test[4] = floatval($test[4]);
+            $test[5] = floatval($test[5]);
+            $test[6] = floatval($test[6]);
+            $codeArea = OpenLocationCode::decode($test[0]);
+            $code = OpenLocationCode::encode($test[1], $test[2], $codeArea->codeLength);
+            $this->assertEquals($code, $test[0]);
 
-        $this->assertInstanceOf(OpenLocationCode::class, $olc);
-        $this->assertSame($code, $olc->getCode());
+        }
     }
 
-    public function testItValidateOnInstantiation()
+    public function testItRejectAWrongCodeLengthOnDecode()
     {
         $this->expectException(Exception::class);
+        $olc = OpenLocationCode::decode('22WM+PW');
+    }
 
-        $olc = new OpenLocationCode('azerty');
-        $this->assertInstanceOf(OpenLocationCode::class, $olc);
+    public function testItRejectAWrongCodeLengthOnEncode()
+    {
+        $this->expectException(Exception::class);
+        $olc = OpenLocationCode::encode(48.847003, 2.286061, 1);
     }
 
     public function testItCanValidateACode()
@@ -95,9 +123,9 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    public function testItCanGenerateACode()
+    private function getTestData($csv)
     {
-        $olc = OpenLocationCode::encode(48.847003, 2.286061, 15);
-        echo $olc->getCode();
+        $url = sprintf("https://raw.githubusercontent.com/google/open-location-code/master/test_data/%s", $csv);
+        return fopen($url, 'r');
     }
 }
