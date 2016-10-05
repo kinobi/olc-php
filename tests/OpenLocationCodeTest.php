@@ -43,7 +43,10 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
             $codeArea = OpenLocationCode::decode($test[0]);
             $code = OpenLocationCode::encode($test[1], $test[2], $codeArea->codeLength);
             $this->assertEquals($code, $test[0]);
-
+            $this->assertEquals($test[3], $codeArea->latitudeLo, '', 0.001);
+            $this->assertEquals($test[4], $codeArea->longitudeLo, '', 0.001);
+            $this->assertEquals($test[5], $codeArea->latitudeHi, '', 0.001);
+            $this->assertEquals($test[6], $codeArea->longitudeHi, '', 0.001);
         }
     }
 
