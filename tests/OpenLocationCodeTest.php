@@ -11,7 +11,7 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
     {
         $tests = $this->getTestData('validityTests.csv');
         while ($test = fgetcsv($tests)) {
-            if(preg_match('/^\s*#/', $test[0])) {
+            if (preg_match('/^\s*#/', $test[0])) {
                 continue;
             }
             $code = $test[0];
@@ -45,6 +45,21 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
             $this->assertEquals($code, $test[0]);
 
         }
+    }
+
+    public function testItCanEncode()
+    {
+        $code = OpenLocationCode::encode(41.380872, 2.123002);
+        $this->assertSame('8FH494JF+86', $code);
+
+        $code = OpenLocationCode::encode(90, 0, 8);
+        $this->assertSame('CFX2X2X2+', $code);
+
+        $code = OpenLocationCode::encode(90, 0, 11);
+        $this->assertSame('CFX2X2X2+R25', $code);
+
+        $code = OpenLocationCode::encode(-37.848760, -216.966358);
+        $this->assertSame('4RJ5522M+FF', $code);
     }
 
     public function testItRejectAWrongCodeLengthOnDecode()
