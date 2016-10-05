@@ -24,13 +24,13 @@ use Kinobiweb\OpenLocationCode;
  */
 class CodeArea
 {
-    public $latitudeLo;
-    public $longitudeLo;
-    public $latitudeHi;
-    public $longitudeHi;
-    public $latitudeCenter;
-    public $longitudeCenter;
-    public $codeLength;
+    protected $latitudeLo;
+    protected $longitudeLo;
+    protected $latitudeHi;
+    protected $longitudeHi;
+    protected $latitudeCenter;
+    protected $longitudeCenter;
+    protected $codeLength;
 
     public function __construct(float $latitudeLo, float $longitudeLo, float $latitudeHi, float $longitudeHi, int $codeLength)
     {
@@ -41,5 +41,61 @@ class CodeArea
         $this->codeLength = $codeLength;
         $this->latitudeCenter = min($latitudeLo + ($latitudeHi - $latitudeLo) / 2, OpenLocationCode::LATITUDE_MAX);
         $this->longitudeCenter = min($longitudeLo + ($longitudeHi - $longitudeLo) / 2, OpenLocationCode::LONGITUDE_MAX);
+    }
+
+    /**
+     * @return float
+     */
+    public function latitudeLo(): float
+    {
+        return $this->latitudeLo;
+    }
+
+    /**
+     * @return float
+     */
+    public function longitudeLo(): float
+    {
+        return $this->longitudeLo;
+    }
+
+    /**
+     * @return float
+     */
+    public function latitudeHi(): float
+    {
+        return $this->latitudeHi;
+    }
+
+    /**
+     * @return float
+     */
+    public function longitudeHi(): float
+    {
+        return $this->longitudeHi;
+    }
+
+    /**
+     * @return float
+     */
+    public function latitudeCenter(): float
+    {
+        return $this->latitudeCenter;
+    }
+
+    /**
+     * @return float
+     */
+    public function longitudeCenter(): float
+    {
+        return $this->longitudeCenter;
+    }
+
+    /**
+     * @return int
+     */
+    public function codeLength(): int
+    {
+        return $this->codeLength;
     }
 }

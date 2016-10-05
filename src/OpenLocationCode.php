@@ -338,11 +338,11 @@ class OpenLocationCode
         }
         $gridArea = static::decodeGrid(substr($code, static::PAIR_CODE_LENGTH));
         return new CodeArea(
-            $codeArea->latitudeLo + $gridArea->latitudeLo,
-            $codeArea->longitudeLo + $gridArea->longitudeLo,
-            $codeArea->latitudeLo + $gridArea->latitudeHi,
-            $codeArea->longitudeLo + $gridArea->longitudeHi,
-            $codeArea->codeLength + $gridArea->codeLength);
+            $codeArea->latitudeLo() + $gridArea->latitudeLo(),
+            $codeArea->longitudeLo() + $gridArea->longitudeLo(),
+            $codeArea->latitudeLo() + $gridArea->latitudeHi(),
+            $codeArea->longitudeLo() + $gridArea->longitudeHi(),
+            $codeArea->codeLength() + $gridArea->codeLength());
     }
 
     /**
