@@ -101,7 +101,7 @@ class OpenLocationCode
      * encoding. These give the place value of each position, and therefore the
      * dimensions of the resulting area.
      */
-    const PAIR_RESOLUTIONS = [20.0, 1.0, .05, .0025, .000125];
+    const PAIR_RESOLUTIONS = [20.0, 1.0, 0.05, 0.0025, 0.000125];
 
     /**
      * Number of columns in the grid refinement method.
@@ -122,11 +122,6 @@ class OpenLocationCode
      * Minimum length of a code that can be shortened.
      */
     const MIN_TRIMMABLE_CODE_LEN = 6;
-
-    /**
-     * @var string  Open Location Code
-     */
-    protected $code;
 
     /**
      * Determines if a code is valid.
@@ -396,14 +391,14 @@ class OpenLocationCode
             // If the center of the short code is more than half a cell east,
             // then the best match will be one position west.
             $nearestAreaLatitude -= $resolution;
-        } elseif ($degreesDifference < -$areaToEdge) {
+        } elseif ($degreesDifference < (-1 * $areaToEdge)) {
             $nearestAreaLatitude += $resolution;
         }
         $degreesDifference = $codeArea->longitudeCenter() - $referenceLongitude;
         $nearestAreaLongitude = $codeArea->longitudeCenter();
         if ($degreesDifference > $areaToEdge) {
             $nearestAreaLongitude -= $resolution;
-        } elseif ($degreesDifference < -$areaToEdge) {
+        } elseif ($degreesDifference < (-1 * $areaToEdge)) {
             $nearestAreaLongitude += $resolution;
         }
 
@@ -429,10 +424,37 @@ class OpenLocationCode
      * @param float $longitude  A longitude, in signed decimal degrees, to use as the reference point.
      *
      * @return string Either the original code, if the reference location was not close enough, or the shortened code.
+     *
+     * @throws Exception
      */
     public static function shorten(string $code, float $latitude, float $longitude): string
     {
-        // TODO: implement shorten method
+        if (!static::isFull($code)) {
+            throw new Exception('Passed code is not valid and full: ' . $code);
+        }
+        if (strpos($code, static::PADDING_CHARACTER) !== false) {
+            throw new Exception('Cannot shorten padded codes: ' . $code);
+        }
+        $code = strtoupper($code);
+        $codeArea = static::decode($code);
+        if ($codeArea->codeLength() < static::MIN_TRIMMABLE_CODE_LEN) {
+            throw new Exception('Code length must be at least ' . static::MIN_TRIMMABLE_CODE_LEN);
+        }
+        // Ensure that latitude and longitude are valid.
+        $latitude = static::clipLatitude($latitude);
+        $longitude = static::normalizeLongitude($longitude);
+        // How close are the latitude and longitude to the code center.
+        $range = max(abs($codeArea->latitudeCenter() - $latitude), abs($codeArea->longitudeCenter() - $longitude));
+        for ($i = count(static::PAIR_RESOLUTIONS) - 2; $i >= 1; $i--) {
+            // Check if we're close enough to shorten. The range must be less than 1/2
+            // the resolution to shorten at all, and we want to allow some safety, so
+            // use 0.3 instead of 0.5 as a multiplier.
+            if ($range < (static::PAIR_RESOLUTIONS[$i] * 0.3)) {
+                // Trim it.
+                return substr($code, ($i + 1) * 2);
+            }
+        }
+        return $code;
     }
 
     /**

@@ -9,11 +9,7 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
 {
     public function testValidityTests()
     {
-        $tests = $this->getTestData('validityTests.csv');
-        while ($test = fgetcsv($tests)) {
-            if (preg_match('/^\s*#/', $test[0])) {
-                continue;
-            }
+        foreach ($this->getTestData('validityTests.csv') as $test) {
             $code = $test[0];
             $is_valid = $test[1] == 'true';
             $is_short = $test[2] == 'true';
@@ -28,11 +24,7 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
 
     public function testEncodingDecodingTests()
     {
-        $tests = $this->getTestData('encodingTests.csv');
-        while ($test = fgetcsv($tests)) {
-            if (preg_match('/^\s*#/', $test[0])) {
-                continue;
-            }
+        foreach ($this->getTestData('encodingTests.csv') as $test) {
             // Convert the string numbers to float.
             $test[1] = floatval($test[1]);
             $test[2] = floatval($test[2]);
@@ -47,6 +39,20 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
             $this->assertEquals($test[4], $codeArea->longitudeLo(), '', 0.001);
             $this->assertEquals($test[5], $codeArea->latitudeHi(), '', 0.001);
             $this->assertEquals($test[6], $codeArea->longitudeHi(), '', 0.001);
+        }
+    }
+
+    public function testShorten()
+    {
+        foreach ($this->getTestData('shortCodeTests.csv') as $test) {
+            $code = $test[0];
+            $lat = floatval($test[1]);
+            $lng = floatval($test[2]);
+            $shortCode = $test[3];
+            $short = OpenLocationCode::shorten($code, $lat, $lng);
+            $this->assertSame($shortCode, $short);
+            $expanded = OpenLocationCode::recoverNearest($short, $lat, $lng);
+            $this->assertEquals($code, $expanded);
         }
     }
 
@@ -68,13 +74,13 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
     public function testItRejectAWrongCodeLengthOnDecode()
     {
         $this->expectException(Exception::class);
-        $olc = OpenLocationCode::decode('22WM+PW');
+        OpenLocationCode::decode('22WM+PW');
     }
 
     public function testItRejectAWrongCodeLengthOnEncode()
     {
         $this->expectException(Exception::class);
-        $olc = OpenLocationCode::encode(48.847003, 2.286061, 1);
+        OpenLocationCode::encode(48.847003, 2.286061, 1);
     }
 
     public function testItCanValidateACode()
@@ -155,6 +161,13 @@ class OpenLocationCodeTest extends \PHPUnit_Framework_TestCase
     private function getTestData($csv)
     {
         $url = sprintf("https://raw.githubusercontent.com/google/open-location-code/master/test_data/%s", $csv);
-        return fopen($url, 'r');
+        $tests = fopen($url, 'r');
+        while ($test = fgetcsv($tests)) {
+            if (preg_match('/^\s*#/', $test[0])) {
+                continue;
+            }
+            yield $test;
+        }
+        fclose($tests);
     }
 }
