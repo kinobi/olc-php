@@ -346,6 +346,96 @@ class OpenLocationCode
     }
 
     /**
+     * Recover the nearest matching code to a specified location.
+     *
+     * Given a valid short Open Location Code this recovers the nearest matching
+     * full code to the specified location.
+     * Short codes will have characters prepended so that there are a total of
+     * eight characters before the separator.
+     *
+     * @param string $shortCode A valid short OLC character sequence.
+     * @param float $referenceLatitude The latitude (in signed decimal degrees) to use to find the nearest matching full code.
+     * @param float $referenceLongitude The longitude (in signed decimal degrees) to use to find the nearest matching full code.
+     *
+     * @return string The nearest full Open Location Code to the reference location that matches
+     * the short code. Note that the returned code may not have the same
+     * computed characters as the reference location. This is because it returns
+     * the nearest match, not necessarily the match within the same cell. If the
+     * passed code was not a valid short code, but was a valid full code, it is
+     * returned unchanged.
+     *
+     * @throws Exception
+     */
+    public static function recoverNearest(string $shortCode, float $referenceLatitude, float $referenceLongitude): string
+    {
+        if (!static::isShort($shortCode)) {
+            if (static::isFull($shortCode)) {
+                return $shortCode;
+            }
+            throw new Exception("Passed short code is not valid: " . $shortCode);
+        }
+        // Ensure that latitude and longitude are valid.
+        $referenceLatitude = static::clipLatitude($referenceLatitude);
+        $referenceLongitude = static::normalizeLongitude($referenceLongitude);
+
+        // Clean up the passed code.
+        $shortCode = strtoupper($shortCode);
+        // Compute the number of digits we need to recover.
+        $paddingLength = static::SEPARATOR_POSITION - strpos($shortCode, static::SEPARATOR);
+        // The resolution (height and width) of the padded area in degrees.
+        $resolution = pow(20, 2 - ($paddingLength / 2));
+        // Distance from the center to an edge (in degrees).
+        $areaToEdge = $resolution / 2;
+
+        // Use the reference location to pad the supplied short code and decode it.
+        $codeArea = static::decode(substr(static::encode($referenceLatitude, $referenceLongitude), 0, $paddingLength) . $shortCode);
+        // How many degrees latitude is the code from the reference? If it is more than half the resolution, we need to move it east or west.
+        $degreesDifference = $codeArea->latitudeCenter() - $referenceLatitude;
+        $nearestAreaLatitude = $codeArea->latitudeCenter();
+        if ($degreesDifference > $areaToEdge) {
+            // If the center of the short code is more than half a cell east,
+            // then the best match will be one position west.
+            $nearestAreaLatitude -= $resolution;
+        } elseif ($degreesDifference < -$areaToEdge) {
+            $nearestAreaLatitude += $resolution;
+        }
+        $degreesDifference = $codeArea->longitudeCenter() - $referenceLongitude;
+        $nearestAreaLongitude = $codeArea->longitudeCenter();
+        if ($degreesDifference > $areaToEdge) {
+            $nearestAreaLongitude -= $resolution;
+        } elseif ($degreesDifference < -$areaToEdge) {
+            $nearestAreaLongitude += $resolution;
+        }
+
+        return static::encode($nearestAreaLatitude, $nearestAreaLongitude, $codeArea->codeLength());
+    }
+
+    /**
+     * Remove characters from the start of an OLC code.
+     *
+     * This uses a reference location to determine how many initial characters
+     * can be removed from the OLC code. The number of characters that can be
+     * removed depends on the distance between the code center and the reference
+     * location.
+     * The minimum number of characters that will be removed is four. If more than
+     * four characters can be removed, the additional characters will be replaced
+     * with the padding character. At most eight characters will be removed.
+     * The reference location must be within 50% of the maximum range. This ensures
+     * that the shortened code will be able to be recovered using slightly different
+     * locations.
+     *
+     * @param string $code      A full, valid code to shorten.
+     * @param float $latitude   A latitude, in signed decimal degrees, to use as the reference point.
+     * @param float $longitude  A longitude, in signed decimal degrees, to use as the reference point.
+     *
+     * @return string Either the original code, if the reference location was not close enough, or the shortened code.
+     */
+    public static function shorten(string $code, float $latitude, float $longitude): string
+    {
+        // TODO: implement shorten method
+    }
+
+    /**
      * Clip a latitude into the range -90 to 90.
      *
      * @param float $latitude A latitude in signed decimal degrees.
